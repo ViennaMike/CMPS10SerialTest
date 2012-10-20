@@ -1,3 +1,8 @@
+// Serial interface test, returning the high precision bearing and raw magnetometer
+// readings.  
+
+// 10/20/2012 Added raw magnetometer readings and cleaned up the code.
+
 
 #include <SparkSoftLCD.h>
 #include <SoftwareSerial.h>
@@ -15,7 +20,7 @@ SparkSoftLCD lcd = SparkSoftLCD(LCD_TX);
 
 float bearing;
 byte highByte, lowByte;
-byte command = 0x13;
+byte bearingCmd = 0x13;
 
 // Function to display heading
 void displayBearing (float h) {  
@@ -41,12 +46,12 @@ void setup(){
    delay(100);
    lcd.clear();
    lcd.cursor(0);    // hidden cursor
-}// End setup
+} // End setup
 
 void loop(){
-  byte highByte, lowByte;
+//  byte highByte, lowByte;
   // Get heading from compass and display to LCD
-  compass.write(command);
+  compass.write(bearingCmd);
   if (compass.available() <1);
   highByte = compass.read();
   lowByte = compass.read();
