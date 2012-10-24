@@ -10,23 +10,28 @@
 #define DEBUG 1 
 
 // Set compass pins 
-int Compass_RX = 2;
-int Compass_TX = 3;
-SoftwareSerial compass(2, 3); 
+int Compass_RX = 12;
+int Compass_TX = 13;
+SoftwareSerial compass(Compass_RX, Compass_TX); 
  
 // LCD transmit pin and initialize library for Sparkfun serial LCD
 int LCD_TX = 9;
 SparkSoftLCD lcd = SparkSoftLCD(LCD_TX);
 
 float bearing;
-byte highByte, lowByte;
+float rawBearing;
+byte highBearing, lowBearing;
 byte bearingCmd = 0x13;
+byte rawMagCmd = 0x21;
 
 // Function to display heading
-void displayBearing (float h) {  
+void displayBearings (float h, float rh) {  
   lcd.cursorTo(1,1);
   lcd.print("Bearing: ");
   lcd.print(h, (byte) 1); 
+  lcd.cursorTo(2, 1);
+  lcd.print("Raw B: ");
+  lcd.print(rh, (byte) 1);
   }
 
 void setup(){
@@ -46,26 +51,60 @@ void setup(){
    delay(100);
    lcd.clear();
    lcd.cursor(0);    // hidden cursor
-} // End setup
+}// End setup
 
 void loop(){
-//  byte highByte, lowByte;
-  // Get heading from compass and display to LCD
+  // Get heading and raw data from compass and display to LCD
+  byte xHigh, xLow, yHigh, yLow, zHigh, zLow;
+  double x, y, rawH;
+  
   compass.write(bearingCmd);
-  if (compass.available() <1);
-  highByte = compass.read();
-  lowByte = compass.read();
-  bearing = ((highByte<<8)+lowByte)/10.;
-   
+  if (compass.available() > 1) {
+    highBearing = compass.read();
+    lowBearing = compass.read();
+  }
+  bearing = ((highBearing<<8)+lowBearing)/10.;
+  compass.write(rawMagCmd);
+  if (compass.available() > 5) {
+    xHigh = compass.read();
+    xLow = compass.read();
+    yHigh = compass.read();
+    yLow = compass.read();
+    zHigh = compass.read();
+    zLow = compass.read();
+  }
+  x = (int) word(xHigh, xLow);
+  y = (int) word(yHigh, yLow);
+  rawH = (atan2(y, x)) ;
+ // Correct for when signs are reversed.
+ if (rawH < 0) {
+   rawH += 2*PI;
+ }
+ // Convert radians to degrees for readability.
+ rawBearing = RAD_TO_DEG * rawH;  // Correct for when signs are reversed.
+         
   #ifdef DEBUG
     Serial.print(" Command: ");
-    Serial.write(command);
+    Serial.write(bearingCmd);
     Serial.print(" highByte: ");
-    Serial.print(highByte, HEX);
+    Serial.print(highBearing, HEX);
     Serial.print(" lowByte: ");
-    Serial.print(lowByte, HEX); 
+    Serial.println(lowBearing, HEX); 
     Serial.print(" Bearing: ");
     Serial.println(bearing);
+    Serial.print(" Command: ");
+    Serial.write(rawMagCmd);
+    Serial.print(" xHigh: ");
+    Serial.print(xHigh, HEX);
+    Serial.print(" xLow: ");
+    Serial.print(xLow, HEX);
+    Serial.print(" yHigh: ");
+    Serial.print(yHigh, HEX);
+    Serial.print(" yLow: ");
+    Serial.println(yLow, HEX);
+    Serial.print("raw bearing: ");
+    Serial.println(rawBearing);
   #endif
-  displayBearing(bearing);
+  displayBearings(bearing, rawBearing);
+  delay(640);
 } // End loop
